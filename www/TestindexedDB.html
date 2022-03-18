@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+
+<!-- Include dexie.js -->
+<script src="https://unpkg.com/dexie@latest/dist/dexie.js"></script>
+
+<style>
+textarea#log
+{
+    width: 100%;
+    height: 600px;
+}
+</style>
+
+<body>
+
+<h1>
+TEST : Saisie reservation et ecriture IndexedDB
+</h1>
+<form class="custom-validated-form" novalidate>
+<input type=date name='date'>Date</input>
+<input type=time name='time'>Time</input>
+<input type=range name='size' min=1 max=12>Party size</input>
+</form>
+<button onclick="myfunc()">Reserve</button>
+<h3>Log</h3>
+<textarea id="log"></textarea>
+
+</body>
+
+<script>
+// simple log function (in-page log window)
+function log(txt) {document.getElementById('log').value+=txt+"\n";}
+
+// Define database
+var db = new Dexie("MyReservationDB");
+
+// Define "reservation" object
+db.version(1).stores({
+	reservation: '++id,start,end,partysize,text'
+});
+
+// is Dexie working ?
+log ("Using Dexie v" + Dexie.semVer);
+
+// Button clicked
+function myfunc() {
+  	// get value from form
+    var formData = new FormData(document.querySelector('form'));
+
+    db.open().then(function(){
+		log("Indexed DB open");
+		// ISO date & time format
+		var r_start = formData.get('date')+"T"+formData.get('time');
+		var r_end = formData.get('date')+"T"+formData.get('time');  
+		
+		// Attention, ici les dates deviennent des chaines de caractères
+		// et ce n'est pas sous la forme de chaine de caractère qu'il faut les
+		// envoyer par la requete POST.
+		// Ne pas oublier : r_end = r_start augmenté de 2h
+		
+		// check values
+		log(r_start);
+		log(r_end);
+		// partysize needs to be an INT for the JSON bloc
+		log(parseInt(formData.get('size')));
+		// replace with your own name
+		return db.reservation.add({start: r_start, end: r_end, partysize: parseInt(formData.get('size')), text: "DUPONT"}).then(function(){
+			log("Add record");
+			// an exemple how to filter records
+			return db.reservation
+					.where('partysize')
+					.between(1,12)
+					.toArray();
+			}).then(function(returndata){
+				log("Found reservation: " + JSON.stringify(returndata, null, 2));
+				})
+		})
+	}
+</script>
+</html>
